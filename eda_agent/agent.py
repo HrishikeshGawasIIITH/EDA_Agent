@@ -110,6 +110,32 @@ def _build_error_context(error_text: str, kb=None, error_kb=None) -> str:
     """Assemble troubleshooting context from RAG KB and error history."""
     parts = []
 
+    # Detect parameter-related errors and add specific guidance
+    if "param not found" in error_text.lower():
+        parts.append("""
+[PARAMETER ERROR DETECTED]
+The error indicates a parameter name is incorrect or not recognized.
+
+IMMEDIATE ACTIONS:
+1. Check the analogLib Component Parameters table in the API reference
+2. Use EXACT parameter names (case-sensitive):
+   - vpulse: per, tr, tf, pw, td (NOT period, rise, fall, width, delay)
+   - vsin: vdc, ampl, freq
+   - cap: c, res: r, ind: l
+3. If component not in table, query its CDF parameters:
+   
+   result = client.execute_skill('''
+   let((cv cdf_data params)
+     cv = dbOpenCellViewByType("analogLib" "COMPONENT_NAME" "symbol" nil "r")
+     cdf_data = cdfGetInstCDF(cv)
+     params = cdf_data->parameters
+     mapcar(lambda((p) sprintf(nil "%s" p->name)) params)
+   )
+   ''')
+
+[END PARAMETER ERROR GUIDANCE]
+""")
+
     # Get relevant documentation from the main KB
     if kb:
         try:

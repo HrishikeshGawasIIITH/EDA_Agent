@@ -61,7 +61,7 @@ def build_kb(dataset):
 9. **Save**: automatic on `client.schematic.edit()` exit
 
 **CRITICAL:** All analogLib sources use PLUS and MINUS terminals.
-vpulse CDF params: v1, v2, period, rise, fall, width, delay (NOT tr, tf, pw, td).
+vpulse CDF params: v1, v2, per, tr, tf, pw, td (NOT period, rise, fall, width, delay).
 Body connections: NMOS body (B) → VSS, PMOS body (B) → VDD.
 """)
 
@@ -197,7 +197,7 @@ Body connections: NMOS body (B) → VSS, PMOS body (B) → VDD.
 | Capacitor | analogLib | cap | symbol | c | c="100f" |
 | Resistor | analogLib | res | symbol | r | r="10k" |
 | DC voltage | analogLib | vdc | symbol | vdc | vdc="1.2" |
-| Pulse src | analogLib | vpulse | symbol | v1,v2,period,rise,fall,width,delay | v2="1.2" |
+| Pulse src | analogLib | vpulse | symbol | v1,v2,per,tr,tf,pw,td | v2="1.2" |
 | DC current | analogLib | idc | symbol | idc | idc="10u" |
 | Sine src | analogLib | vsin | symbol | vdc,ampl,freq | freq="1G" |
 """)

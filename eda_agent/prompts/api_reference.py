@@ -113,14 +113,43 @@ with client.schematic.edit(tb_lib, tb_cell, mode="w") as sch:
 
 set_instance_params(client, "V_DC", lib=tb_lib, cell=tb_cell, vdc="1.2")
 set_instance_params(client, "V_IN", lib=tb_lib, cell=tb_cell,
-    v1="0", v2="1.2", period="1n", rise="10p", fall="10p", width="0.5n", delay="0")
+    v1="0", v2="1.2", per="1n", tr="10p", tf="10p", pw="0.5n", td="0")
 set_instance_params(client, "C_LOAD", lib=tb_lib, cell=tb_cell, c="10f")
 ```
 
-#### Terminal names for analogLib sources
-- vdc/vpulse/vsin/idc/cap/res: PLUS, MINUS
-- vpulse CDF params: v1, v2, period, rise, fall, width, delay (NOT tr, tf, pw, td)
+#### analogLib Component Parameters (VERIFIED)
+⚠️ Use EXACT parameter names below — case-sensitive!
+
+| Component | Terminals | Key Parameters | Example |
+|-----------|-----------|----------------|---------|
+| **vdc** | PLUS, MINUS | vdc | `vdc="1.2"` |
+| **vpulse** | PLUS, MINUS | v1, v2, per, tr, tf, pw, td | `v1="0", v2="1.2", per="1n", tr="10p", tf="10p", pw="500p", td="0"` |
+| **vsin** | PLUS, MINUS | vdc, ampl, freq | `vdc="0.6", ampl="100m", freq="1G"` |
+| **idc** | PLUS, MINUS | idc | `idc="10u"` |
+| **cap** | PLUS, MINUS | c | `c="10f"` |
+| **res** | PLUS, MINUS | r | `r="1k"` |
+| **ind** | PLUS, MINUS | l | `l="1n"` |
+
+**CRITICAL vpulse params:** per (period), tr (rise time), tf (fall time), pw (pulse width), td (delay)
+**NOT:** period, rise, fall, width, delay — those will fail with "param not found"
+
+#### Unknown Parameters? Query them!
+If you encounter "param not found" for any component, query its CDF parameters:
+```python
+# Query all parameters for an instance
+params = client.execute_skill('''
+let((cv inst params)
+  cv = geGetEditCellView()
+  inst = dbFindAnyInstByName(cv "INSTANCE_NAME")
+  params = inst~>?? ; get all parameter names
+  params)
+''')
+```
+
+#### Terminal names & warnings
+- All analogLib sources: PLUS, MINUS terminals
 - gnd: DO NOT USE in testbenches (causes schCheck failure)
+- Use net labels for VSS instead
 
 ### Layout editing
 ```python

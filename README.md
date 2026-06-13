@@ -21,35 +21,35 @@ Built on top of [virtuoso-bridge-lite](https://github.com/Arcadia-1/virtuoso-bri
 │                      User (CLI REPL)                     │
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
-│  ┌─────────────┐   ┌──────────────┐   ┌──────────────┐  │
+│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐  │
 │  │  RAG Engine  │   │  LLM Session │   │  Error KB    │  │
 │  │ (FAISS +     │   │ (Gemini /    │   │ (semantic    │  │
 │  │  sentence-   │   │  DeepSeek)   │   │  dedup +     │  │
 │  │  transformers│   │              │   │  resolution) │  │
 │  └──────┬───────┘   └──────┬───────┘   └──────┬───────┘  │
-│         │                  │                   │          │
-│         └──────────┬───────┘───────────────────┘          │
-│                    │                                      │
-│              ┌─────▼──────┐                               │
-│              │ Agent Loop  │ ◄── generate → execute →     │
-│              │             │     retry with context        │
-│              └─────┬──────┘                               │
-│                    │                                      │
-│              ┌─────▼──────┐                               │
-│              │VirtuosoAPI  │ ◄── Python methods wrapping   │
-│              │             │     SKILL commands            │
-│              └─────┬──────┘                               │
-│                    │                                      │
+│         │                  │                  │          │
+│         └──────────┬───────┘──────────────────┘          │
+│                    │                                     │
+│              ┌─────▼──────┐                              │
+│              │ Agent Loop │ ◄── generate → execute →     │
+│              │            │     retry with context       │
+│              └─────┬──────┘                              │
+│                    │                                     │
+│              ┌─────▼──────┐                              │
+│              │VirtuosoAPI │ ◄── Python methods wrapping  │
+│              │            │     SKILL commands           │
+│              └─────┬──────┘                              │
+│                    │                                     │
 ├────────────────────┼─────────────────────────────────────┤
-│              ┌─────▼──────┐                               │
-│              │ virtuoso-   │ ◄── SSH tunnel + SKILL IPC   │
-│              │ bridge-lite │                               │
-│              └─────┬──────┘                               │
-│                    │                                      │
-│              ┌─────▼──────┐                               │
-│              │  Cadence    │                               │
-│              │  Virtuoso   │                               │
-│              └─────────────┘                               │
+│              ┌─────▼──────┐                              │
+│              │ virtuoso-  │ ◄── SSH tunnel + SKILL IPC   │
+│              │ bridge-lite│                              │
+│              └─────┬──────┘                              │
+│                    │                                     │
+│              ┌─────▼──────┐                              │
+│              │  Cadence   │                              │
+│              │  Virtuoso  │                              │
+│              └────────────┘                              │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -187,7 +187,6 @@ All configuration is via environment variables (loaded from `.env`):
 - **LLM Providers**: Google Gemini, DeepSeek V4 Pro (via NVIDIA NIM)
 - **RAG**: sentence-transformers (`all-MiniLM-L6-v2`) + FAISS
 - **EDA Bridge**: virtuoso-bridge-lite (SKILL IPC over SSH tunnel)
-- **Process**: TSMC 65nm (tsmcN65 PDK)
 
 ## License
 

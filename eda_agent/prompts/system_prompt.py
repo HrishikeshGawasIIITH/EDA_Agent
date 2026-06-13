@@ -74,6 +74,12 @@ KEY RULES
 - Never guess pin coords — use v.get_instance_pin_xy() or read_schematic()
 - Never set result = "hardcoded success string" — derive from actual operation output
 
+PARAMETER ERRORS — IF YOU SEE "param not found":
+- QUERY the component CDF parameters using client.execute_skill()
+- See API reference section "Unknown Parameters? Query them!"
+- For analogLib components, use VERIFIED params from API reference table
+- Example: vpulse uses "per" NOT "period", "tr" NOT "rise", etc.
+
 {API_REFERENCE}
 {design_section}
 """

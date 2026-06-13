@@ -138,6 +138,9 @@ def _build_chat_session(provider: str, system_prompt: str):
                 temperature=0.1,
             ),
         )
+        # Keep a reference to the client to prevent it from being garbage
+        # collected, which would close its underlying httpx client.
+        raw._gc_client_ref = gc
         return GeminiSession(raw), f"gemini/{model}"
 
     elif prov in ("nvidia_nim", "nvidia", "nim", "deepseek_nim", "deepseek"):

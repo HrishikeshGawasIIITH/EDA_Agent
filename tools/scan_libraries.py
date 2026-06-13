@@ -448,7 +448,7 @@ def generate_kb_section(dataset):
         "| Capacitor | analogLib | cap | symbol | c |\n"
         "| Resistor | analogLib | res | symbol | r |\n"
         "| DC voltage | analogLib | vdc | symbol | vdc |\n"
-        "| Pulse src | analogLib | vpulse | symbol | v1,v2,period,rise,fall,width,delay |\n"
+        "| Pulse src | analogLib | vpulse | symbol | v1,v2,per,tr,tf,pw,td |\n"
         "| DC current | analogLib | idc | symbol | idc |\n"
     )
 
