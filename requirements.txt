@@ -1,0 +1,12 @@
+# Core
+python-dotenv>=1.0.0
+virtuoso-bridge-lite>=0.1.0
+
+# LLM providers
+google-genai>=1.0.0
+openai>=1.0.0
+
+# RAG (semantic search)
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.0
+numpy>=1.24.0

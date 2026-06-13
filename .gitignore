@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment & secrets
+.env
+
+# FAISS index caches (auto-generated)
+.kb_cache_*.pkl
+
+# Error logs (runtime-generated)
+agent_errors.log
+
+# Large data files (not suitable for git)
+*.json
+!.vscode/*.json
+data/*.md
+data/*.json
+
+# OS files
+.DS_Store
+Thumbs.db
