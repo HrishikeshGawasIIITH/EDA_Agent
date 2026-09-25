@@ -1,0 +1,79 @@
+# Maestro setup for EDA_Agent_Bench/inv_tb_ref   (test: EDA_Agent_Bench_inv_tb_ref_1)
+# Paste these into the CIW one at a time, in order.
+
+; 0. what is already open (read-only)
+maeGetSessions()
+
+; 0b. does the maestro view exist?
+ddGetObj("EDA_Agent_Bench" "inv_tb_ref" "maestro") && t
+
+; 0c. is a modal dialog blocking SKILL?
+let((f) f=hiGetCurrentForm() if(f && hiIsFormDisplayed(f) "BLOCKED" "free"))
+
+; 1. create the maestro cellview
+deOpenCellView("EDA_Agent_Bench" "inv_tb_ref" "maestro" "maestro" nil "w")
+
+; 2. session that was just opened
+car(maeGetSessions())
+
+; 3. make the setup editable
+maeMakeEditable()
+
+; 4. create the test bound to the schematic
+maeCreateTest("EDA_Agent_Bench_inv_tb_ref_1" ?lib "EDA_Agent_Bench" ?cell "inv_tb_ref" ?view "schematic" ?simulator "spectre")
+
+; 5. read back the test list
+maeGetSetup()
+
+; 6. point the test at the PDK model file
+maeSetEnvOption("EDA_Agent_Bench_inv_tb_ref_1" ?options `(("modelFiles" (("/home/PDK/Analog/TSMC_65/models/spectre/crn65gplus_2d5_lk_v1d0.scs" "tt")))))
+
+; 7. read back modelFiles
+maeGetEnvOption("EDA_Agent_Bench_inv_tb_ref_1" ?option "modelFiles")
+
+; 8. enable the transient analysis
+maeSetAnalysis("EDA_Agent_Bench_inv_tb_ref_1" "tran" ?enable t ?options `(("stop" "20n") ("errpreset" "moderate")))
+
+; 9. read back the analysis
+maeGetAnalysis("EDA_Agent_Bench_inv_tb_ref_1" "tran")
+
+; 9b. read back enabled analyses
+maeGetEnabledAnalysis("EDA_Agent_Bench_inv_tb_ref_1")
+
+; 10. save waveform for /IN
+maeAddOutput("IN" "EDA_Agent_Bench_inv_tb_ref_1" ?outputType "net" ?signalName "/IN")
+
+; 10. save waveform for /OUT
+maeAddOutput("OUT" "EDA_Agent_Bench_inv_tb_ref_1" ?outputType "net" ?signalName "/OUT")
+
+; 11. measured output vout_in_high
+maeAddOutput("vout_in_high" "EDA_Agent_Bench_inv_tb_ref_1" ?outputType "point" ?expr "value(VT(\"/OUT\") 2.5n)")
+
+; 11. measured output vout_in_low
+maeAddOutput("vout_in_low" "EDA_Agent_Bench_inv_tb_ref_1" ?outputType "point" ?expr "value(VT(\"/OUT\") 7.5n)")
+
+; 12. save the setup to disk
+maeSaveSetup(?lib "EDA_Agent_Bench" ?cell "inv_tb_ref" ?view "maestro")
+
+; 13. run the simulation (async; returns a history name)
+maeRunSimulation()
+
+; 14. run mode / status
+maeGetCurrentRunMode()
+
+; ---- after the run finishes ----
+; 15. open the results
+maeOpenResults(?history "Interactive.0")
+
+; 16. select the transient
+selectResult('tran)
+
+; 17. which nets were saved
+outputs()
+
+; 18. read a measured output
+maeGetOutputValue("vout_in_high" "EDA_Agent_Bench_inv_tb_ref_1")
+
+; 19. or query the waveform directly
+value(v("/OUT") 2.5n)
+

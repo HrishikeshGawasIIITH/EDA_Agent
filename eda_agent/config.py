@@ -35,7 +35,7 @@ SYSTEM_LIBS = {"tsmcN65", "analogLib", "sample", "basic", "ahdlLib"}
 
 # ── LLM Settings ─────────────────────────────────────────────────────────
 
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "gemini_adc")
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "gemini")
 
 # Agent retry limit per task
 MAX_RETRIES = 3

@@ -121,14 +121,11 @@ def _build_chat_session(provider: str, system_prompt: str):
         from eda_agent.llm import GeminiSession
 
         api_key = os.environ.get("GOOGLE_API_KEY", "")
-        if api_key:
-            gc = genai.Client(api_key=api_key)
-        else:
-            gc = genai.Client(
-                vertexai=True,
-                project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
-                location=os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"),
+        if not api_key:
+            raise ValueError(
+                "GOOGLE_API_KEY not set — add it to your .env file or environment."
             )
+        gc = genai.Client(api_key=api_key)
 
         model = os.environ.get("GEMINI_MODEL", "gemini-2.5-pro")
         raw = gc.chats.create(
@@ -165,9 +162,39 @@ def _build_chat_session(provider: str, system_prompt: str):
         )
         return OpenAISession(oai, model, system_prompt, temperature=0.1), f"nim/{model}"
 
+    elif prov in ("anthropic", "anthropic_compat", "deepseek_anthropic", "claude"):
+        import anthropic
+        from eda_agent.llm import AnthropicSession
+
+        auth_token = os.environ.get("ANTHROPIC_AUTH_TOKEN", "")
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not (auth_token or api_key):
+            raise ValueError(
+                "ANTHROPIC_AUTH_TOKEN (or ANTHROPIC_API_KEY) not set — "
+                "add it to your .env file or environment."
+            )
+
+        # base_url is optional: omit it to talk to Anthropic itself, or point it
+        # at a compatible endpoint (e.g. https://api.deepseek.com/anthropic).
+        kwargs = {}
+        base_url = os.environ.get("ANTHROPIC_BASE_URL", "")
+        if base_url:
+            kwargs["base_url"] = base_url
+        if auth_token:
+            kwargs["auth_token"] = auth_token
+        else:
+            kwargs["api_key"] = api_key
+
+        ac = anthropic.Anthropic(**kwargs)
+        model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5")
+        return (
+            AnthropicSession(ac, model, system_prompt, temperature=0.1),
+            f"anthropic/{model}",
+        )
+
     raise ValueError(
         f"Unknown LLM_PROVIDER='{provider}'. "
-        "Use: gemini_adc | nvidia_nim | deepseek_nim"
+        "Use: gemini_adc | nvidia_nim | deepseek_nim | anthropic"
     )
 
 

@@ -22,17 +22,26 @@ env/
 # Environment & secrets
 .env
 
+# Claude Code workspace — tooling, not part of this project
+.claude/
+CLAUDE_SKILL/
+
 # FAISS index caches (auto-generated)
 .kb_cache_*.pkl
 
 # Error logs (runtime-generated)
 agent_errors.log
 
+# Tool scratch output (screenshots land in docs/media/, not here)
+output/
+
 # Large data files (not suitable for git)
 *.json
 !.vscode/*.json
 data/*.md
 data/*.json
+# ...but published benchmark evidence belongs in the repo
+!docs/*.json
 
 # OS files
 .DS_Store

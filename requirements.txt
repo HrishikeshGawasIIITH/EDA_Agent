@@ -5,6 +5,7 @@ virtuoso-bridge-lite>=0.1.0
 # LLM providers
 google-genai>=1.0.0
 openai>=1.0.0
+anthropic>=0.40.0
 
 # RAG (semantic search)
 sentence-transformers>=2.2.0
