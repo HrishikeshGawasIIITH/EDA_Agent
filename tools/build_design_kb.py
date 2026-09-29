@@ -52,11 +52,16 @@ def build_kb(dataset):
 3. **Place DUT** (your custom cell as symbol)
 4. **Place supply source** — `analogLib/vdc` for VDD (set `vdc="1.2"` for tsmcN65)
 5. **Place input stimulus**:
-   - Digital: `analogLib/vpulse` — v1="0", v2="1.2", period="2n", rise="10p", fall="10p", width="1n"
+   - Digital: `analogLib/vpulse` — v1="0", v2="1.2", per="10n", tr="10p", tf="10p", pw="5n", td="0"
+     (CDF names are per/tr/tf/pw/td — NOT period/rise/fall/width/delay. Pass
+      param_filters=None to set_instance_params or the timing params are dropped.)
    - Analog AC: `analogLib/vsin` — vdc="0.6", ampl="100m", freq="1G"
 6. **Place load cap** (optional): `analogLib/cap` — c="10f"
 7. **Connect with net labels** — same label name = same net
-   - DO NOT use analogLib/gnd symbol — causes schCheck failure
+   - Label every ground terminal with the GLOBAL net `gnd!` (with the `!`).
+     Do NOT place an analogLib/gnd symbol — its floating terminal makes schCheck
+     throw. Do NOT ground to plain `VSS`: it checks clean but leaves no node 0,
+     so Spectre has no ground reference and the simulation is meaningless.
 8. **Set params** with `set_instance_params(client, inst, lib=..., cell=...)`
 9. **Save**: automatic on `client.schematic.edit()` exit
 

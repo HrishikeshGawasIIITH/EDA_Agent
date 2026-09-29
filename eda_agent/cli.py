@@ -105,6 +105,43 @@ def _load_scan_summary() -> str:
         return f"Error reading scan data: {exc}"
 
 
+
+# ── Bridge diagnostics ────────────────────────────────────────────────────
+
+def _bridge_help() -> str:
+    """Actionable recovery steps for a dead or blocked bridge."""
+    return """
+The agent talks to Virtuoso over an SSH tunnel into a SKILL daemon. Check in
+this order — each step assumes the previous one passed:
+
+1. Tunnel up?     virtuoso-bridge status
+   '[tunnel] NOT running' means the local SSH forward died (it does not survive
+   a laptop sleep or a network blip). Restart it:
+       virtuoso-bridge start
+   or forward the port yourself, which leaves the remote daemon untouched:
+       ssh -N -o ServerAliveInterval=30 -L 65082:localhost:65081 <user>@<host>
+
+2. Daemon connected?  Same command should show '[daemon] OK - connected to
+   Virtuoso CIW'. If not, load the SKILL file in the Virtuoso CIW:
+       load("/tmp/virtuoso_bridge_<user>/<name>/virtuoso_bridge/virtuoso_setup.il")
+   The daemon lives inside Virtuoso, so it dies when Virtuoso restarts.
+
+3. Session responsive but every call times out?  A MODAL DIALOG is blocking
+   SKILL. Nothing will work until it is dismissed in the GUI. Check with:
+       virtuoso-bridge eval 'let((f) f=hiGetCurrentForm() \
+           if(f && hiIsFormDisplayed(f) "BLOCKED" "free"))'
+   Common culprits: ADE 'Not Found' or ASSEMBLER-8127 from a bad Maestro open.
+
+4. '[spectre] NOT FOUND' is usually a FALSE ALARM. The bridge probes a login
+   shell that never sources the Cadence cshrc; Virtuoso's own process normally
+   has spectre on PATH and ADE simulates fine. Set VB_CADENCE_CSHRC only if you
+   actually need shell-side spectre.
+
+5. Stale Maestro session after a run?  Close the ADE/Waveform WINDOWS first,
+   then maeCloseSession — see 'Running a simulation' in the API reference.
+"""
+
+
 # ── Chat session factory ─────────────────────────────────────────────────
 
 def _build_chat_session(provider: str, system_prompt: str):
@@ -225,7 +262,7 @@ def main():
         print(f"✅ Connected  |  Server time: {t.output.strip()}")
     except Exception as exc:
         print(f"❌ Connection failed: {exc}")
-        print("Run 'virtuoso-bridge start' and load the SKILL file in the CIW.")
+        print(_bridge_help())
         return
 
     # Pre-warm KB in background
@@ -234,7 +271,8 @@ def main():
     # REPL banner
     print("=" * 60)
     print(f"🤖 EDA Agent  ({model_display} | RAG + Design KB)")
-    print("Commands: 'status', 'libs', 'cells <lib>', '/rag <query>', '/scan', 'exit'")
+    print("Commands: 'status', 'libs', 'cells <lib>', '/rag <query>', "
+          "'/scan', '/diag', 'exit'")
     print("=" * 60)
 
     while True:
@@ -293,6 +331,24 @@ def main():
                     preview = sec.content[:80].replace("\n", " ").strip()
                     print(f"  [{score:.3f}] {sec.path}")
                     print(f"          {preview}...")
+            continue
+
+        if user_input.lower() in {"/diag", "/bridge"}:
+            try:
+                t = raw_client.execute_skill("getCurrentTime()", timeout=30)
+                print(f"  ✅ SKILL round-trip OK — {(t.output or '').strip()}")
+                f = raw_client.execute_skill(
+                    'let((f) f=hiGetCurrentForm() '
+                    'if(f && hiIsFormDisplayed(f) "BLOCKED" "free"))', timeout=30)
+                blocked = "BLOCKED" in (f.output or "")
+                print(f"  {'❌' if blocked else '✅'} modal dialog: "
+                      f"{'BLOCKING — dismiss it in the GUI' if blocked else 'none'}")
+                m = raw_client.execute_skill("maeGetSessions()", timeout=30)
+                print(f"  ℹ️  maestro sessions: {(m.output or '').strip()}")
+                print(f"  ℹ️  open windows    : {len(raw_client.list_windows())}")
+            except Exception as exc:
+                print(f"  ❌ Bridge is not responding: {exc}")
+                print(_bridge_help())
             continue
 
         if user_input.lower() == "/scan":

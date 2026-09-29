@@ -1,76 +1,88 @@
-# Grounding benchmark — LLM round-trips per schematic task
+# Grounding benchmark — round-trips per task, verified by simulation
 
-Run: 2026-09-25 · model `deepseek-v4-pro` (Anthropic-compatible endpoint, temperature 0.1) · live Cadence Virtuoso IC23.1, TSMC 65nm · `MAX_RETRIES=3`
+Run: 2026-09-29 · `deepseek-v4-pro` (temperature 0.1) · live Cadence Virtuoso IC23.1 + Spectre 23.1, TSMC 65nm · `MAX_RETRIES=3`
 
-## What is being measured
+## What is measured
 
-A **round-trip** is one `chat_session.send_message()` call — the unit that costs latency and tokens. A task that succeeds on the first attempt costs 2 (generate, then confirm the execution result); every failed attempt adds one more, capped by `MAX_RETRIES`.
+A **round-trip** is one `chat_session.send_message()` call — the unit that costs latency and tokens. A task that lands first try costs 2 (generate, then confirm).
 
-Each task is one natural-language prompt asking for a specific cell. **Success is verified against Virtuoso** — the cell and its required views must actually exist afterwards — not inferred from the absence of an exception. Cells are deleted before each run so every condition starts from the same state, and all three conditions start from an identical error-memory snapshot.
+**Success is proven by simulation, not by existence.** An earlier version of this benchmark counted a task successful when its cellviews existed. That was too weak: it passed an inverter testbench grounded with plain `VSS` net labels, which has no global ground, no SPICE node 0, and could never have simulated — yet it passes `schCheck` cleanly. The harness now builds the Maestro setup itself, runs a transient, and requires the measured node voltages to land within 5% of a rail.
+
+The harness's own verification simulation is **not** counted in round-trips — it is scoring, not solving. Runs lost to a dead SSH tunnel or a busy Virtuoso are tagged `infra_error`, retried, and excluded rather than charged to the condition.
 
 ## Conditions
 
-| Condition | Static API reference | RAG retrieval | Design KB | Error memory |
-|-----------|:---:|:---:|:---:|:---:|
-| `bare`     | ✗ | ✗ | ✗ | ✗ |
-| `cold`     | ✓ | ✗ | ✗ | ✗ |
+| | static API reference | RAG | design KB | error memory |
+|---|:---:|:---:|:---:|:---:|
+| `cold` | ✓ | ✗ | ✗ | ✗ |
 | `grounded` | ✓ | ✓ | ✓ | ✓ |
 
-`bare` keeps only the JSON output contract the agent loop needs in order to parse anything at all; every piece of injected EDA domain knowledge is stripped. This distinction matters: the shipped system prompt already embeds a full API reference, so *"RAG off"* is not the same as *"ungrounded"*.
+Both conditions receive the shipped system prompt, which embeds a ~14 KB hand-written EDA reference (API surface, the analogLib parameter table, the `gnd!` rule, and the verified Maestro flow). `cold` is therefore **not** an ungrounded agent — it is an agent without *retrieval*. This distinction dominates the result.
 
 ## Results
 
-| task | bare | cold | grounded |
-|------|-----:|-----:|---------:|
-| `inv` | 4 ✗ | 2 | 2 |
-| `nand2` | 5 ✗ | 2 | 2 |
-| `nor2` | 4 ✗ | 2 | 2 |
-| `tgate` | 5 ✗ | 2 | 2 |
-| `cs_amp` | 5 ✗ | 2 | 2 |
-| `cmirror` | 5 ✗ | 2 | 2 |
-| `cascode_mirror` | 5 ✗ | 2 | 2 |
-| `diffpair` | 5 ✗ | 2 | 2 |
-| `ota_5t` | 5 ✗ | 2 | 2 |
-| `ring_osc_3` | 5 ✗ | 5 | 2 |
-| `ring_osc_5` | 5 ✗ | 1 ✗ | 2 |
-| `inv_tb` | 4 ✗ | 4 | 2 |
-| **completed** | **0/12** | **11/12** | **12/12** |
-| **mean round-trips** | **4.75** | **2.33** | **2.00** |
+| task | kind | cold | grounded |
+|------|------|-----:|---------:|
+| `inv` | simple | 2 | 2 |
+| `nand2` | simple | 2 | 2 |
+| `nor2` | simple | 2 | 2 |
+| `tgate` | simple | 2 | 2 |
+| `cs_amp` | simple | 2 | 2 |
+| `cmirror` | simple | 2 | 2 |
+| `cascode_mirror` | simple | 2 | 2 |
+| `diffpair` | simple | 2 | 2 |
+| `ota_5t` | simple | 2 | 3 |
+| `ring_osc_3` | simple | 5 ✗ | 2 |
+| `ring_osc_5` | simple | 4 | 3 ✗ |
+| `inv_tb` | simple | 2 | 2 |
+| `sinv` | sim | 4 | 1 ✗ |
+| `snand` | sim | 4 | 4 |
+| `snor` | sim | 5 | 4 |
+| `sbuf` | sim | 4 | 4 |
+| `stgate` | sim | 4 | 5 |
+| `sinv_w` | sim | 4 | 4 |
+| **mean — all 18** | | **3.00** (17/18 ok) | **2.67** (16/18 ok) |
+| **mean — simple 12** | | **2.42** (11/12 ok) | **2.17** (11/12 ok) |
+| **mean — simulation 6** | | **4.17** (6/6 ok) | **3.67** (5/6 ok) |
 
-`✗` marks a task that did not produce the requested cellviews.
+`✗` marks a task whose circuit did not verify.
 
-## Headline
+## Headline — and why it is small
 
-- **Grounding vs none — 58% fewer round-trips** (4.75 → 2.00 per task), and completion goes from **0/12** to **12/12**.
-- **Retrieval on top of a detailed prompt — 14% fewer** (2.33 → 2.00), completion **11/12** → **12/12**.
+- Across all 18 tasks: **3.00 → 2.67** round-trips (**11% fewer**), completion 17/18 → 16/18.
+- On the 15 tasks **both** conditions completed: **2.73 → 2.80** — a **2% increase**, i.e. no measurable benefit.
 
-The second number is small because `cold` already sits at the 2-round-trip floor on the nine simpler cells. The gap concentrates in the tasks that are actually hard:
+The paired figure is the honest one. The headline reduction is inflated by a `grounded` failure (`sinv`) that cost only 1 round-trip because the model returned an unparseable response and the loop bailed early — a failure that looks cheap.
 
-| task | cold | grounded |
-|------|-----:|---------:|
-| `ring_osc_3` (hierarchical reuse) | 5 | 2 |
-| `ring_osc_5` (hierarchical reuse) | failed | 2 |
-| `inv_tb` (testbench + `schCheck`)  | 4 | 2 |
+**Why retrieval adds little here:** the decisive knowledge already sits in the static prompt that both conditions share. The nine simplest cells are at the 2-round-trip floor for both. Retrieval only helps where a task exceeds what the static prompt covers — `ring_osc_3` (cold: 5 round-trips and a failed check; grounded: 2) is the clearest case.
 
-Across the two of those that both conditions completed, retrieval cuts round-trips by 56% (9 → 4).
+## The comparison that does show a large effect
 
-## How `bare` fails
+An earlier run ablated grounding **as a whole** — a `bare` condition with the API reference, rules and retrieval all stripped, leaving only the JSON output contract:
 
-The failure is strikingly uniform. In 9 of 12 tasks `bare` built a correct schematic and then failed only on the symbol view — it never discovers `v.create_symbol()`, which lives in the static API reference. It burns all four attempts re-trying variations and still ends with `views=['schematic']`.
+| | bare | grounded |
+|---|---:|---:|
+| mean round-trips | 4.75 | 2.00 |
+| tasks completed | 0/12 | 12/12 |
 
-## Caveats
+**58% fewer round-trips, and 0/12 → 12/12 completion.** `bare` built correct schematics but never discovered `v.create_symbol()`, burning all four attempts in 9 of 12 tasks. Caveats: that run used the earlier 12-task set and the earlier prompt, and `bare`'s mean is a ceiling imposed by `MAX_RETRIES` — read it next to the 0/12, not instead of it. See `benchmark_results.json`.
 
-- `bare` round-trips are **capped** by `MAX_RETRIES=3` (≤5 round-trips). Its 4.75 mean is a ceiling imposed by the retry limit, not the cost of eventually succeeding — it never succeeded. Read the number alongside the 0/12 completion rate, not instead of it.
-- `ring_osc_3`, `ring_osc_5` and `inv_tb` instantiate the `inv` cell built by an earlier task. Under `bare` that cell had no symbol view, so those three failures are partly **cascading** rather than independent.
-- One run per cell per condition, a single model at temperature 0.1. These are not averaged over repeated trials, so treat per-task numbers as indicative.
+So the two numbers answer different questions: **grounding vs none ≈ 58%**; **retrieval on top of an already-grounded prompt ≈ 0–11%**.
+
+## Independent verification
+
+Three agent-built modules were re-simulated by hand at probe points the benchmark did not score on:
+
+| module | check | measured |
+|---|---|---|
+| `sbuf` | output must FOLLOW input | IN 1.2 V → OUT 1.199986 V; IN 0 V → OUT 6.2 µV |
+| `snand` | A=B=high → output low | 30.4 µV at 5 ns and 15 ns |
+| `snor` | A=B=low → output high | 1.199946 V at 5 ns and 15 ns |
 
 ## Reproduce
 
 ```bash
-python tools/benchmark_roundtrips.py                       # all three conditions
-python tools/benchmark_roundtrips.py --conditions bare grounded --tasks 4
+python tools/benchmark_v2.py                      # cold + grounded, 18 tasks
+python tools/benchmark_v2.py --only sim --tasks 3
+python tools/benchmark_v2.py --resume             # retry infra failures only
 ```
-
-Raw per-run metrics (all 36 runs): [`benchmark_results.json`](benchmark_results.json).
-Full agent transcripts are kept locally in `data/benchmark_all.json` (gitignored — they
-embed a listing of the host's private library names).
